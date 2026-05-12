@@ -1,6 +1,6 @@
 package org.example.aiintegratedspringbootservice;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import org.example.aiintegratedspringbootservice.api.ChatRequest;
@@ -48,10 +48,18 @@ class ChatIntegrationTest {
         // Speed up retry to keep the test fast.
         registry.add("openrouter.retry.wait-duration", () -> "1ms");
         registry.add("openrouter.retry.backoff-multiplier", () -> "1.0");
+        // Effectively disable the circuit breaker for integration tests.
+        // @SpringBootTest shares a single OpenRouterClient (and its CircuitBreaker)
+        // across all @Test methods, so the "upstream is permanently down" scenario
+        // would accumulate enough failures to trip the breaker and short-circuit
+        // the unrelated "happy path" tests with a 503. Breaker behaviour itself is
+        // covered by OpenRouterClientTest, so suppressing it here is safe.
+        registry.add("openrouter.circuit-breaker.failure-rate-threshold", () -> "100");
+        registry.add("openrouter.circuit-breaker.minimum-number-of-calls", () -> "10000");
     }
 
     @Autowired private MockMvc mockMvc;
-    @Autowired private ObjectMapper mapper;
+    @Autowired private JsonMapper mapper;
 
     private static final String SUCCESS_BODY_1 = """
             {"choices":[{"index":0,"message":{"role":"assistant","content":"Hi!"},"finish_reason":"stop"}]}

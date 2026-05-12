@@ -11,9 +11,11 @@ import org.example.aiintegratedspringbootservice.client.dto.ChatCompletionRespon
 import org.example.aiintegratedspringbootservice.config.OpenRouterProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.List;
 
@@ -54,8 +56,14 @@ class OpenRouterClientTest {
                 new OpenRouterProperties.CircuitBreaker(
                         100f, 100, 100, Duration.ofSeconds(30), 3));
 
+        // Force HTTP/1.1 — see OpenRouterClientConfig for rationale; WireMock + JDK
+        // HttpClient default HTTP/2 occasionally throws RST_STREAM on response close.
+        HttpClient http = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .build();
         RestClient restClient = RestClient.builder()
                 .baseUrl(openRouter.baseUrl())
+                .requestFactory(new JdkClientHttpRequestFactory(http))
                 .defaultHeader("Authorization", "Bearer test-key")
                 .defaultHeader("Content-Type", "application/json")
                 .build();

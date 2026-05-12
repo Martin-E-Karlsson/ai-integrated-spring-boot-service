@@ -26,7 +26,11 @@ public class OpenRouterClientConfig {
 
     @Bean
     public RestClient openRouterRestClient(RestClient.Builder builder, OpenRouterProperties props) {
+        // Force HTTP/1.1: OpenRouter supports both, and HTTP/2 negotiation occasionally
+        // surfaces as a spurious RST_STREAM IOException (visible especially against
+        // WireMock in tests), which our retry layer would treat as transient.
         HttpClient httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);

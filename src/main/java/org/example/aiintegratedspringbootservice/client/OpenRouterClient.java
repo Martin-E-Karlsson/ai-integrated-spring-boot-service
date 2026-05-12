@@ -10,6 +10,7 @@ import org.example.aiintegratedspringbootservice.client.dto.ChatCompletionRespon
 import org.example.aiintegratedspringbootservice.config.OpenRouterProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
@@ -44,6 +45,7 @@ public class OpenRouterClient {
     private final Retry retry;
     private final CircuitBreaker circuitBreaker;
 
+    @Autowired
     public OpenRouterClient(RestClient openRouterRestClient, OpenRouterProperties props) {
         this(openRouterRestClient, props, buildRetry(props.retry()), buildCircuitBreaker(props.circuitBreaker()));
     }

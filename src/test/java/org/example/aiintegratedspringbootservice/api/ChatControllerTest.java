@@ -1,6 +1,6 @@
 package org.example.aiintegratedspringbootservice.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
@@ -40,8 +40,12 @@ class ChatControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    /**
+     * Spring Boot 4 auto-configures a Jackson 3 {@link JsonMapper}, not the
+     * legacy Jackson 2 {@code com.fasterxml.jackson.databind.ObjectMapper}.
+     */
     @Autowired
-    private ObjectMapper objectMapper;
+    private JsonMapper objectMapper;
 
     @MockitoBean
     private ChatService chatService;
