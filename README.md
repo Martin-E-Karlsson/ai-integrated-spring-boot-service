@@ -1,8 +1,6 @@
 # AI-Integrated Spring Boot Service
 
-Middleware service (Laboration 1) that bridges an end user and an LLM. Maps a personality choice to a system prompt, retains conversation history per session, and forwards the call to OpenRouter via Spring `RestClient` with retry/circuit-breaker resilience.
-
-See [`DECISIONS.md`](DECISIONS.md) for the architecture log and rationale for each design choice.
+Middleware service that bridges an end user and an LLM. Maps a personality choice to a system prompt, retains conversation history per session, and forwards the call to OpenRouter via Spring `RestClient` with retry/circuit-breaker resilience.
 
 ## Stack
 
@@ -17,7 +15,9 @@ export OPENROUTER_API_KEY=sk-or-v1-...
 ./mvnw spring-boot:run
 ```
 
-Then:
+Read .env.example to see how the API key should be implemented. 
+
+Then use one of the following options to test the API with requests:
 
 - POST `http://localhost:8080/api/v1/chat`
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
@@ -33,6 +33,9 @@ curl -X POST http://localhost:8080/api/v1/chat \
 ```
 
 The response includes a `sessionId`. Reuse it on follow-up calls to continue the conversation.
+
+Example requests can also be made through IntelliJ IDEA Ultimate's built-in HTTP Client.
+Go to http/chat.http and run each request using the green ► next to it once the application is running.
 
 ## Test
 
