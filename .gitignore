@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Local env (real secrets) ###
+.env
+.env.local
+application-local.yaml
+application-local.properties

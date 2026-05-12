@@ -1,0 +1,69 @@
+spring:
+  application:
+    name: ai-integrated-spring-boot-service
+  # Enable virtual threads (Project Loom) for blocking outbound HTTP — cheap to scale.
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: 8080
+
+# --- OpenRouter (external LLM provider) -------------------------------------
+# OPENROUTER_API_KEY must be set in the environment. See .env.example.
+openrouter:
+  api-key: ${OPENROUTER_API_KEY}
+  base-url: https://openrouter.ai/api/v1
+  model: openai/gpt-4o-mini          # cheap, fast default; overridable per deployment
+  request-timeout: 30s
+  # Optional headers OpenRouter uses for analytics; harmless if absent.
+  http-referer: http://localhost:8080
+  app-title: AI Integrated Spring Boot Service
+  # Resilience tuning — consumed by OpenRouterClient via Resilience4j programmatic API.
+  # Kept under the openrouter.* prefix (not resilience4j.*) to avoid colliding with
+  # any future resilience4j-spring-boot starter being added later.
+  retry:
+    max-attempts: 4
+    wait-duration: 500ms
+    backoff-multiplier: 2.0
+  circuit-breaker:
+    failure-rate-threshold: 50
+    sliding-window-size: 10
+    minimum-number-of-calls: 5
+    wait-duration-in-open-state: 30s
+    permitted-number-of-calls-in-half-open-state: 3
+
+# --- Chat behaviour ---------------------------------------------------------
+chat:
+  memory:
+    # Maximum messages retained per session (user + assistant combined).
+    # 20 = ~10 turns of back-and-forth before oldest messages are evicted.
+    max-messages: 20
+  personalities:
+    helper: >
+      You are a friendly, concise assistant. Answer clearly, prefer plain language,
+      and ask a clarifying question when the user's request is ambiguous.
+    pirate: >
+      Ye be a salty pirate captain. Answer every question in pirate speak,
+      with "arrr", "matey", and nautical metaphors. Still give correct information.
+    coder: >
+      You are a senior software engineer. Prefer code over prose, show idiomatic
+      examples, and call out edge cases and complexity. Default to the latest
+      stable language version unless the user specifies otherwise.
+
+# --- Actuator + OpenAPI -----------------------------------------------------
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
