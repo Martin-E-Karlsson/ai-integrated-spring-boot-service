@@ -3,7 +3,6 @@ package org.example.aiintegratedspringbootservice.config;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.info.License;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -23,7 +22,6 @@ public class OpenApiConfig {
                         .description("Middleware that bridges end users and an LLM via OpenRouter. "
                                 + "Choose a personality, optionally maintain a session, and chat.")
                         .version("v1")
-                        .contact(new Contact().name("Martin Karlsson").email("m.karlsson91@gmail.com"))
-                        .license(new License().name("MIT")));
+                        .contact(new Contact().name("Martin Karlsson")));
     }
 }
