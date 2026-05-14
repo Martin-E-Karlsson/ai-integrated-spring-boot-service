@@ -11,6 +11,8 @@ import org.example.aiintegratedspringbootservice.client.dto.ChatCompletionRespon
 import org.example.aiintegratedspringbootservice.config.OpenRouterProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -31,8 +33,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Unit tests for {@link OpenRouterClient} against a WireMock-stubbed OpenRouter.
- * Verifies: happy path, retry-on-transient, no-retry-on-permanent, and
- * retry exhaustion behaviour.
+ * Verifies: happy path, retry-on-transient (429 and 503),
+ * no-retry-on-permanent, and retry exhaustion behaviour.
  *
  * Retry timings are forced to {@code 1ms} via test-only Retry/CircuitBreaker
  * instances so the suite stays sub-second.
@@ -56,8 +58,6 @@ class OpenRouterClientTest {
                 new OpenRouterProperties.CircuitBreaker(
                         100f, 100, 100, Duration.ofSeconds(30), 3));
 
-        // Force HTTP/1.1 — see OpenRouterClientConfig for rationale; WireMock + JDK
-        // HttpClient default HTTP/2 occasionally throws RST_STREAM on response close.
         HttpClient http = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .build();
@@ -68,7 +68,6 @@ class OpenRouterClientTest {
                 .defaultHeader("Content-Type", "application/json")
                 .build();
 
-        // Build with tiny retry interval and open-on-never circuit breaker
         Retry retry = Retry.of("test-retry", RetryConfig.custom()
                 .maxAttempts(maxAttempts)
                 .intervalFunction(IntervalFunction.of(Duration.ofMillis(1)))
@@ -138,42 +137,16 @@ class OpenRouterClientTest {
                         """)));
     }
 
-    @Test
-    void retriesOn429AndEventuallySucceeds() {
-        // First 2 calls → 429, third → 200
+    @ParameterizedTest
+    @ValueSource(ints = {429, 503})
+    void retriesOnTransientStatusAndEventuallySucceeds(int transientStatus) {
         openRouter.stubFor(post(urlEqualTo("/chat/completions"))
-                .inScenario("retry-429")
+                .inScenario("retry")
                 .whenScenarioStateIs("Started")
-                .willReturn(aResponse().withStatus(429))
-                .willSetStateTo("after-1"));
-        openRouter.stubFor(post(urlEqualTo("/chat/completions"))
-                .inScenario("retry-429")
-                .whenScenarioStateIs("after-1")
-                .willReturn(aResponse().withStatus(429))
-                .willSetStateTo("after-2"));
-        openRouter.stubFor(post(urlEqualTo("/chat/completions"))
-                .inScenario("retry-429")
-                .whenScenarioStateIs("after-2")
-                .willReturn(aResponse().withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody(SUCCESS_BODY)));
-
-        ChatCompletionResponse response = newClient(4).complete(List.of(
-                new ChatCompletionRequest.Message("user", "Hi")));
-
-        assertThat(response.firstChoiceContent()).isEqualTo("Hello!");
-        openRouter.verify(3, postRequestedFor(urlEqualTo("/chat/completions")));
-    }
-
-    @Test
-    void retriesOn503AndEventuallySucceeds() {
-        openRouter.stubFor(post(urlEqualTo("/chat/completions"))
-                .inScenario("retry-503")
-                .whenScenarioStateIs("Started")
-                .willReturn(aResponse().withStatus(503))
+                .willReturn(aResponse().withStatus(transientStatus))
                 .willSetStateTo("recovered"));
         openRouter.stubFor(post(urlEqualTo("/chat/completions"))
-                .inScenario("retry-503")
+                .inScenario("retry")
                 .whenScenarioStateIs("recovered")
                 .willReturn(aResponse().withStatus(200)
                         .withHeader("Content-Type", "application/json")

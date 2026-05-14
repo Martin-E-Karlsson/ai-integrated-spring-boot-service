@@ -9,6 +9,9 @@ import org.example.aiintegratedspringbootservice.memory.ChatMemoryService;
 import org.example.aiintegratedspringbootservice.memory.ChatMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
@@ -60,24 +63,17 @@ class ChatServiceTest {
         assertThat(result.personality()).isEqualTo("helper");
     }
 
-    @Test
-    void generatesSessionIdWhenMissing() {
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   ", "\t"})
+    void generatesSessionIdWhenMissingOrBlank(String inputSessionId) {
         stubReply("Hi");
 
-        ChatResult result = service.chat("helper", "Hello", null);
+        ChatResult result = service.chat("helper", "Hello", inputSessionId);
 
         assertThat(result.sessionId())
                 .isNotBlank()
                 .matches("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
-    }
-
-    @Test
-    void generatesSessionIdWhenBlank() {
-        stubReply("Hi");
-
-        ChatResult result = service.chat("helper", "Hello", "   ");
-
-        assertThat(result.sessionId()).isNotBlank().isNotEqualTo("   ");
     }
 
     @Test
@@ -114,11 +110,9 @@ class ChatServiceTest {
 
     @Test
     void secondTurnIncludesPriorHistoryInRequest() {
-        // Turn 1
         stubReply("Hi");
         service.chat("helper", "Hello", "sess-4");
 
-        // Turn 2
         stubReply("Sure thing");
         service.chat("helper", "Follow-up", "sess-4");
 
@@ -128,7 +122,6 @@ class ChatServiceTest {
         org.mockito.Mockito.verify(openRouter, org.mockito.Mockito.times(2)).complete(captor.capture());
         List<ChatCompletionRequest.Message> secondCallMessages = captor.getAllValues().get(1);
 
-        // [system, user1, assistant1, user2]
         assertThat(secondCallMessages).hasSize(4);
         assertThat(secondCallMessages.get(0).role()).isEqualTo("system");
         assertThat(secondCallMessages.get(1).role()).isEqualTo("user");
@@ -144,7 +137,6 @@ class ChatServiceTest {
         assertThatThrownBy(() -> service.chat("villain", "Hello", "sess-5"))
                 .isInstanceOf(UnknownPersonalityException.class);
 
-        // Memory must not be polluted by a rejected request
         assertThat(memory.history("sess-5")).isEmpty();
     }
 

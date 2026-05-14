@@ -1,6 +1,5 @@
 package org.example.aiintegratedspringbootservice.api;
 
-import tools.jackson.databind.json.JsonMapper;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
@@ -10,12 +9,15 @@ import org.example.aiintegratedspringbootservice.service.ChatResult;
 import org.example.aiintegratedspringbootservice.service.ChatService;
 import org.example.aiintegratedspringbootservice.service.UpstreamEmptyResponseException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.json.JsonMapper;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -28,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Web slice tests for {@link ChatController}.
  *
- * Uses {@link MockitoBean} (Spring 6.2+) for service stubbing — the older
+ * Uses {@link MockitoBean} (Spring 6.2+) for service stubbing &mdash; the older
  * {@code @MockBean} is removed in Spring Boot 4. The {@link GlobalExceptionHandler}
  * is explicitly imported because {@code @WebMvcTest} only loads controllers
  * by default, not {@code @ControllerAdvice} beans.
@@ -66,25 +68,18 @@ class ChatControllerTest {
                 .andExpect(jsonPath("$.personality").value("helper"));
     }
 
-    @Test
-    void missingPersonality_returns400ProblemDetail() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{\"message\": \"Hello\"}",
+            "{\"personality\": \"helper\", \"message\": \"\"}",
+            "{\"personality\": \"\", \"message\": \"Hi\"}"
+    })
+    void invalidRequestBody_returns400ProblemDetail(String body) throws Exception {
         mockMvc.perform(post("/api/v1/chat")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"message": "Hello"}
-                                """))
+                        .content(body))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
-    }
-
-    @Test
-    void blankMessage_returns400() throws Exception {
-        mockMvc.perform(post("/api/v1/chat")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"personality": "helper", "message": ""}
-                                """))
-                .andExpect(status().isBadRequest());
     }
 
     @Test

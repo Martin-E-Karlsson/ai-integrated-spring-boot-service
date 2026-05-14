@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.example.aiintegratedspringbootservice.service.ChatResult;
 import org.example.aiintegratedspringbootservice.service.ChatService;
 import org.springframework.http.MediaType;
@@ -22,14 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping(value = "/api/v1", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequiredArgsConstructor
 @Tag(name = "Chat", description = "Conversational endpoint over OpenRouter")
 public class ChatController {
 
     private final ChatService chatService;
-
-    public ChatController(ChatService chatService) {
-        this.chatService = chatService;
-    }
 
     @PostMapping(value = "/chat", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Send a chat message",
