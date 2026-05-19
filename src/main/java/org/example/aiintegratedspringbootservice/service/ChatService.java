@@ -1,5 +1,6 @@
 package org.example.aiintegratedspringbootservice.service;
 
+import lombok.RequiredArgsConstructor;
 import org.example.aiintegratedspringbootservice.client.OpenRouterClient;
 import org.example.aiintegratedspringbootservice.client.dto.ChatCompletionRequest;
 import org.example.aiintegratedspringbootservice.client.dto.ChatCompletionResponse;
@@ -16,7 +17,7 @@ import java.util.UUID;
 /**
  * Orchestrates a single chat turn:
  * <ol>
- *   <li>resolves the personality -> system prompt,</li>
+ *   <li>resolves the personality -&gt; system prompt,</li>
  *   <li>loads prior history for the session (if any),</li>
  *   <li>appends the new user message to history,</li>
  *   <li>calls OpenRouter with [system, ...history],</li>
@@ -28,19 +29,12 @@ import java.util.UUID;
  * conversation on subsequent calls.
  */
 @Service
+@RequiredArgsConstructor
 public class ChatService {
 
     private final PersonalityProperties personalities;
     private final ChatMemoryService memory;
     private final OpenRouterClient openRouter;
-
-    public ChatService(PersonalityProperties personalities,
-                       ChatMemoryService memory,
-                       OpenRouterClient openRouter) {
-        this.personalities = personalities;
-        this.memory = memory;
-        this.openRouter = openRouter;
-    }
 
     public ChatResult chat(String personality, String userMessage, String sessionId) {
         String systemPrompt = personalities.systemPromptFor(personality);

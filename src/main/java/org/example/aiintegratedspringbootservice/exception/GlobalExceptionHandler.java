@@ -1,10 +1,9 @@
 package org.example.aiintegratedspringbootservice.exception;
 
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import lombok.extern.slf4j.Slf4j;
 import org.example.aiintegratedspringbootservice.config.UnknownPersonalityException;
 import org.example.aiintegratedspringbootservice.service.UpstreamEmptyResponseException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
@@ -30,12 +29,11 @@ import java.net.URI;
  * our catch-all {@link #handleUnexpected(Exception)} only fires for
  * genuinely unhandled exceptions.
  */
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-
-    /** Unknown personality requested -> 400. */
+    /** Unknown personality requested -&gt; 400. */
     @ExceptionHandler(UnknownPersonalityException.class)
     public ProblemDetail handleUnknownPersonality(UnknownPersonalityException ex) {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
@@ -45,7 +43,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return pd;
     }
 
-    /** Upstream answered 2xx but with empty/unusable body -> 502. */
+    /** Upstream answered 2xx but with empty/unusable body -&gt; 502. */
     @ExceptionHandler(UpstreamEmptyResponseException.class)
     public ProblemDetail handleEmptyUpstream(UpstreamEmptyResponseException ex) {
         log.warn("Upstream returned empty content: {}", ex.getMessage());
@@ -56,7 +54,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return pd;
     }
 
-    /** Upstream returned a non-2xx status that wasn't retried/recovered -> propagate. */
+    /** Upstream returned a non-2xx status that wasn't retried/recovered -&gt; propagate. */
     @ExceptionHandler(RestClientResponseException.class)
     public ProblemDetail handleUpstreamHttpError(RestClientResponseException ex) {
         HttpStatusCode upstreamStatus = ex.getStatusCode();
@@ -70,7 +68,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return pd;
     }
 
-    /** Connection refused / timeout / DNS error talking to upstream -> 503. */
+    /** Connection refused / timeout / DNS error talking to upstream -&gt; 503. */
     @ExceptionHandler(ResourceAccessException.class)
     public ProblemDetail handleUpstreamUnreachable(ResourceAccessException ex) {
         log.warn("Upstream unreachable: {}", ex.getMessage());
@@ -81,7 +79,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return pd;
     }
 
-    /** Circuit breaker is open -> short-circuit to 503. */
+    /** Circuit breaker is open -&gt; short-circuit to 503. */
     @ExceptionHandler(CallNotPermittedException.class)
     public ProblemDetail handleCircuitOpen(CallNotPermittedException ex) {
         log.warn("Circuit breaker open: {}", ex.getMessage());
@@ -92,7 +90,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return pd;
     }
 
-    /** Anything we did not anticipate -> 500. */
+    /** Anything we did not anticipate -&gt; 500. */
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleUnexpected(Exception ex) {
         log.error("Unhandled exception in chat pipeline", ex);
@@ -107,10 +105,10 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
      * Map upstream HTTP status to the status we return to our caller.
      * Rules:
      * <ul>
-     *   <li>5xx upstream -> {@code 503 Service Unavailable} (we are a proxy that depends on it),</li>
-     *   <li>{@code 429} upstream -> {@code 429 Too Many Requests},</li>
-     *   <li>{@code 401/403} upstream -> {@code 502 Bad Gateway} (our config error, not the client's),</li>
-     *   <li>any other 4xx upstream -> {@code 502 Bad Gateway}.</li>
+     *   <li>5xx upstream -&gt; {@code 503 Service Unavailable} (we are a proxy that depends on it),</li>
+     *   <li>{@code 429} upstream -&gt; {@code 429 Too Many Requests},</li>
+     *   <li>{@code 401/403} upstream -&gt; {@code 502 Bad Gateway} (our config error, not the client's),</li>
+     *   <li>any other 4xx upstream -&gt; {@code 502 Bad Gateway}.</li>
      * </ul>
      */
     private static HttpStatus mapUpstreamStatus(HttpStatusCode upstream) {

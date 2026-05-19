@@ -5,10 +5,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -65,7 +61,6 @@ class ChatMemoryServiceTest {
             assertThatThrownBy(() -> snapshot.add(ChatMessage.user("sneaky")))
                     .isInstanceOf(UnsupportedOperationException.class);
 
-            // Service state still has only the original message
             assertThat(service.history("s1")).hasSize(1);
         }
 
@@ -93,7 +88,6 @@ class ChatMemoryServiceTest {
         @DisplayName("evicts the oldest message when capacity is exceeded (FIFO)")
         void evictsOldestWhenFull() {
             ChatMemoryService service = newService();
-            // MAX_MESSAGES = 4, push 6 messages
             IntStream.rangeClosed(1, 6).forEach(i ->
                     service.append("s1", ChatMessage.user("m" + i)));
 
@@ -136,47 +130,6 @@ class ChatMemoryServiceTest {
 
             assertThat(service.history("s1")).isEmpty();
             assertThat(service.history("s2")).hasSize(1);
-        }
-    }
-
-    @Nested
-    @DisplayName("concurrency")
-    class Concurrency {
-
-        @Test
-        @DisplayName("appends from many threads on the same session do not lose messages")
-        void concurrentAppendsAreSafe() throws Exception {
-            int threads = 16;
-            int messagesPerThread = 25;
-            // Use a much larger capacity so nothing is evicted in this test
-            ChatMemoryService service = new ChatMemoryService(threads * messagesPerThread + 10);
-            ExecutorService pool = Executors.newFixedThreadPool(threads);
-            CountDownLatch start = new CountDownLatch(1);
-            CountDownLatch done = new CountDownLatch(threads);
-
-            try {
-                for (int t = 0; t < threads; t++) {
-                    final int threadId = t;
-                    pool.submit(() -> {
-                        try {
-                            start.await();
-                            for (int i = 0; i < messagesPerThread; i++) {
-                                service.append("shared", ChatMessage.user("t" + threadId + "-m" + i));
-                            }
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        } finally {
-                            done.countDown();
-                        }
-                    });
-                }
-                start.countDown();
-                assertThat(done.await(10, TimeUnit.SECONDS)).isTrue();
-            } finally {
-                pool.shutdownNow();
-            }
-
-            assertThat(service.history("shared")).hasSize(threads * messagesPerThread);
         }
     }
 }

@@ -27,7 +27,6 @@ public record PersonalityProperties(@NotEmpty Map<String, String> personalities)
         if (name == null) {
             throw new UnknownPersonalityException("null");
         }
-        // Tolerate case differences in the request without expanding the config surface.
         for (var entry : personalities.entrySet()) {
             if (entry.getKey().equalsIgnoreCase(name)) {
                 return entry.getValue();
